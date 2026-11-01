@@ -1,13 +1,15 @@
 # Smart Ventilation System: Pin Connections
 
-**Wiring reference for the sensor, display, relay-driver and fan connections of the prototype**
+**Wiring reference for the power, sensor, display, relay-driver and fan connections of the prototype**
 
 |  |  |
 | --- | --- |
 | **Controller** | ESP32-WROOM-32 development board |
+| **Power arrangement** | 12 V adapter → LM2596 buck converter (adjusted to 5 V) → USB-C cable → ESP32 |
 | **Low-voltage logic** | 3.3 V (DHT22, OLED) and USB-derived 5 V (MQ module, relay module) |
-| **Fan supply** | Separate 12 V adapter, switched through relay contacts |
-| **Document type** | Pinout and wiring reference |
+| **Fan supply** | 12 V adapter, switched through relay contacts |
+
+This document describes the prototype wiring. Verify all module labels, board power arrangements and component datasheets before reproducing the circuit.
 
 ## 1. ESP32 GPIO Assignment
 
@@ -19,16 +21,16 @@
 | GPIO34 (D34) | MQ voltage-divider junction | Analog sensor input |
 | GPIO5 (D5) | KN2222A base, through a 10 kΩ resistor | Relay-control signal |
 | 3V3 | DHT22 VCC and OLED VCC | 3.3 V supply |
-| USB-derived 5 V / VIN rail | MQ module VCC and relay module VCC | 5 V module supply (verify the board's VIN behaviour) |
-| GND | Sensor, OLED, transistor and relay grounds | Common low-voltage reference |
+| USB-derived 5 V rail | MQ module VCC and relay module VCC | 5 V module supply (verify the actual board and wiring) |
+| GND | Low-voltage circuit grounds | Common reference |
 
 ## 2. DHT22 Temperature and Humidity Sensor
 
-| DHT22 pin | Connect to ESP32 |
+| DHT22 pin | Connect to |
 | --- | --- |
-| `+` / VCC | 3V3 |
-| `OUT` / DATA | GPIO4 (D4) |
-| `-` / GND | GND |
+| `+` / VCC | ESP32 3V3 |
+| `OUT` / DATA | ESP32 GPIO4 (D4) |
+| `-` / GND | Common GND |
 
 **Notes**
 
@@ -57,16 +59,16 @@ For equal resistor values:
 
 `V_GPIO34 ≈ V_AO / 2`
 
-> **Important:** Measure or otherwise verify the maximum voltage at GPIO34 under actual operating conditions. The ESP32 ADC input must stay within its permitted range. Raw MQ readings are prototype indicators only, not calibrated gas concentrations or certified AQI values.
+> **Important:** Verify the maximum voltage at GPIO34 under actual operating conditions. The ESP32 ADC input must stay within its permitted range. Raw MQ readings are prototype indicators only, not calibrated gas concentrations or certified AQI values.
 
 ## 4. OLED Display (I²C)
 
-| OLED pin | Connect to ESP32 |
+| OLED pin | Connect to |
 | --- | --- |
-| VCC | 3V3 |
-| GND | GND |
-| SDA | GPIO21 (D21) |
-| SCL / SCK | GPIO22 (D22) |
+| VCC | ESP32 3V3 |
+| GND | Common GND |
+| SDA | ESP32 GPIO21 (D21) |
+| SCL / SCK | ESP32 GPIO22 (D22) |
 
 - **Tested I²C address:** `0x3C`
 - **Display:** 0.96-inch, 128 × 64 pixels, SSD1306-compatible module (confirm the controller on the actual display)
@@ -77,7 +79,7 @@ For equal resistor values:
 
 | KN2222A terminal | Connection |
 | --- | --- |
-| Base | GPIO5, through a 10 kΩ resistor |
+| Base | ESP32 GPIO5, through a 10 kΩ resistor |
 | Collector | Relay module IN |
 | Emitter | Common GND |
 
@@ -96,11 +98,11 @@ For equal resistor values:
 | HIGH | On | Pulled LOW (active-low) | Activated |
 | LOW | Off | Not pulled low | Deactivated |
 
-> **Critical verification:** Confirm the base, collector and emitter arrangement from the datasheet for the exact KN2222A package, since pinouts can differ between manufacturers and packages. Also verify that the relay module input is active-low and that its input circuit is compatible with this transistor arrangement.
+> **Critical verification:** Confirm the base, collector and emitter arrangement from the datasheet for the exact KN2222A package. Also verify that the relay module input is active-low and compatible with this transistor interface.
 
-## 6. Relay Contact and 12 V Fan Connections
+## 6. Relay Contacts and 12 V Exhaust Fan
 
-Tested relay screw-terminal mapping:
+Terminal mapping identified on the tested relay module:
 
 | Terminal marking | Function | Connection |
 | --- | --- | --- |
@@ -117,41 +119,76 @@ Tested relay screw-terminal mapping:
 
 When the relay activates, COM connects to NO and the fan is powered. When the relay is inactive, the NO contact is open and the fan supply is disconnected.
 
-Verify the relay contact ratings against the fan's rated and startup current, and confirm the terminal markings on the actual relay module before applying power.
+Verify the terminal markings and relay contact ratings against the actual module and the fan's rated and startup current.
 
-## 7. Power Distribution Summary
+## 7. Power Supply Connections
 
-| Supply | Loads in the current prototype |
+### 7.1 ESP32 power path
+
+| From | To | Description |
+| --- | --- | --- |
+| 12 V DC adapter positive and negative | LM2596 input (`IN+`, `IN-`) | Supplies the buck converter |
+| LM2596 output (`OUT+`, `OUT-`) | USB-C cable power input | Provides regulated 5 V to the cable |
+| USB-C cable | ESP32 USB-C port | Powers the ESP32 development board |
+
+**Before connecting the USB-C cable to the ESP32**
+
+- Adjust the LM2596 output and verify approximately 5 V with a multimeter.
+- Confirm the USB-C cable is wired for the correct polarity and power pins.
+- Use a suitable USB-C power connector or breakout, or a correctly assembled cable. Do not assume a bare USB-C cable can safely be connected directly to the buck converter output.
+- Check that the converter can supply the ESP32's peak current demand.
+- Do not connect a second USB power source at the same time unless the board's power design explicitly supports it.
+
+### 7.2 Sensor and relay power
+
+The current prototype wiring uses the USB-derived 5 V rail for the MQ sensor module and relay module. The DHT22 and OLED use the ESP32 3.3 V output. Confirm the actual wiring and module voltage ratings.
+
+### 7.3 Fan power path
+
+The 12 V adapter also supplies the fan through the relay contacts:
+
+`12 V adapter (+) → Relay COM → Relay NO → Fan (+)`
+
+`Fan (-) → 12 V adapter (-)`
+
+> **Warning:** The fan's 12 V supply must never be connected directly to ESP32 GPIO pins or the 3.3 V rail.
+
+## 8. Power Distribution Summary
+
+| Supply | Loads |
 | --- | --- |
-| ESP32 USB power | ESP32 development board |
+| 12 V adapter | LM2596 input, and fan supply through relay contacts |
+| LM2596 regulated 5 V output | ESP32, through the USB-C power connection |
 | ESP32 3.3 V output | DHT22 and OLED |
-| USB-derived 5 V rail | MQ sensor module and relay module |
-| Separate 12 V adapter | Exhaust fan, through relay contacts |
+| USB-derived 5 V rail | MQ module and relay module, per the current prototype wiring |
 
-The LM2596 HW-411 buck converter is currently unused and is not part of this wiring configuration.
+The LM2596 is part of the current power arrangement. Its output powers the ESP32 through a USB-C cable.
 
-## 8. Pre-Power Checklist
+## 9. Pre-Power Checklist
 
-- [ ] Confirm ESP32 GPIO labels and board pinout.
+- [ ] Confirm ESP32 board pin labels and power-input arrangement.
+- [ ] Measure the LM2596 output before connecting the USB-C cable.
+- [ ] Confirm USB-C power wiring and polarity.
 - [ ] Confirm DHT22 VCC, DATA and GND connections.
-- [ ] Confirm OLED SDA and SCL connections and I²C address.
+- [ ] Confirm OLED SDA, SCL, supply voltage and I²C address.
 - [ ] Confirm the MQ voltage-divider junction is connected to GPIO34.
 - [ ] Verify the maximum voltage at GPIO34 is within the ESP32 ADC input limits.
 - [ ] Confirm the KN2222A base, collector and emitter pinout from its datasheet.
 - [ ] Confirm relay module polarity and active-low input behaviour.
 - [ ] Verify COM, NO and NC terminal markings on the actual relay.
 - [ ] Confirm the fan's voltage and current ratings.
-- [ ] Check that the 12 V fan supply is not connected to any ESP32 GPIO or 3.3 V pin.
-- [ ] Check wiring for shorts, loose connections and exposed conductors before powering the system.
+- [ ] Check that 12 V is not applied directly to any ESP32 GPIO or 3.3 V pin.
+- [ ] Check for shorts, loose connections and exposed conductors before powering the system.
 
-## 9. Safety Notes
+## 10. Safety Notes
 
 - Disconnect all power sources before changing wiring.
 - Never apply 12 V directly to an ESP32 GPIO pin or the 3.3 V rail.
-- Do not assume every ESP32 development board exposes VIN the same way. Check the board documentation and measure the rail before using it.
-- Keep the fan's 12 V power path separate from the ESP32 logic supply. Use the required common ground for the low-voltage transistor/relay control circuit.
+- Verify the buck converter output with a multimeter before connecting it to the USB-C power input.
+- Do not connect USB power from a computer and the buck-converter USB-C supply at the same time unless the development board supports this safely.
+- Verify the relay contact rating and fan startup current.
 - Use insulated connections and a protective grille around the rotating fan.
-- This pinout documents an educational prototype. Verify all component labels and datasheets before reproducing the circuit.
+- This document describes an educational prototype. Verify every connection against the actual component labels and datasheets before reproducing the circuit.
 
 ---
 
