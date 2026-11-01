@@ -164,23 +164,7 @@ The 12 V adapter also supplies the fan through the relay contacts:
 
 The LM2596 is part of the current power arrangement. Its output powers the ESP32 through a USB-C cable.
 
-## 9. Pre-Power Checklist
-
-- [ ] Confirm ESP32 board pin labels and power-input arrangement.
-- [ ] Measure the LM2596 output before connecting the USB-C cable.
-- [ ] Confirm USB-C power wiring and polarity.
-- [ ] Confirm DHT22 VCC, DATA and GND connections.
-- [ ] Confirm OLED SDA, SCL, supply voltage and I²C address.
-- [ ] Confirm the MQ voltage-divider junction is connected to GPIO34.
-- [ ] Verify the maximum voltage at GPIO34 is within the ESP32 ADC input limits.
-- [ ] Confirm the KN2222A base, collector and emitter pinout from its datasheet.
-- [ ] Confirm relay module polarity and active-low input behaviour.
-- [ ] Verify COM, NO and NC terminal markings on the actual relay.
-- [ ] Confirm the fan's voltage and current ratings.
-- [ ] Check that 12 V is not applied directly to any ESP32 GPIO or 3.3 V pin.
-- [ ] Check for shorts, loose connections and exposed conductors before powering the system.
-
-## 10. Safety Notes
+## 9. Safety Notes
 
 - Disconnect all power sources before changing wiring.
 - Never apply 12 V directly to an ESP32 GPIO pin or the 3.3 V rail.
@@ -189,7 +173,3 @@ The LM2596 is part of the current power arrangement. Its output powers the ESP32
 - Verify the relay contact rating and fan startup current.
 - Use insulated connections and a protective grille around the rotating fan.
 - This document describes an educational prototype. Verify every connection against the actual component labels and datasheets before reproducing the circuit.
-
----
-
-*Prepared for the Smart Ventilation System GitHub repository.*
